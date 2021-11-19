@@ -24,7 +24,18 @@ def getinfo(ck):
     page = 1
     sum = 0
     usedsum = 0
+    jxsum = 0
+    usedjx = 0
+    litesum = 0
+    usedlite = 0
+    healthsum = 0
+    usedhealth = 0
+    jdsum = 0
+    usedjd = 0
+    tysum = 0
+    usedty = 0
     count = 0
+    redinfo = []
     while isNext:
         url = "https://wq.jd.com/user/info/QueryUserRedEnvelopesV2?type=2&orgFlag=JD_PinGou_New&page=%s&cashRedType=1&redBalanceFlag=0&channel=3&_=%s&sceneval=2&g_login_type=1&g_ty=ls" % (
             page, gettimestamp())
@@ -41,9 +52,14 @@ def getinfo(ck):
             'cookie': ck
         }
         r = requests.get(url, headers=headers).json()
-        # print(r)
         if r['data']['unUseRedInfo']['redList'] == None:
-            print('累计红包总数', count, '累计红包总额 %.2f' % sum, '已使用红包总额 %.2f' % usedsum)
+            print('最近六个月累计红包总数', count, '累计红包总额 %.2f元' % sum, '已使用红包总额 %.2f元\n' % usedsum)
+            print(
+                '其中：\n京东商城：总金额%.2f元\t已使用：%.2f元\n京喜：总金额%.2f元\t已使用：%.2f元\n极速版：总金额%.2f元\t已使用：%.2f元\n京东健康：总金额%.2f元\t已使用：%.2f元\n通用红包：总金额%.2f元\t已使用：%.2f元\n' % (
+                    jdsum, usedjd, jxsum, usedjx, litesum, usedlite, healthsum, usedhealth, tysum, usedty))
+            print('所有红包统计：')
+            for i in redinfo:
+                print('%s\t总计%s个\t总金额%.2f元\t已使用%.2f元' % (i[0], i[1], i[2], i[3]))
             isNext = False
         else:
             page += 1
@@ -51,6 +67,33 @@ def getinfo(ck):
             for i in r['data']['unUseRedInfo']['redList']:
                 sum += float(i['discount'])
                 usedsum += (float(i['discount']) - float(i['balance']))
+                if "京喜" in i['orgLimitStr']:
+                    jxsum += float(i['discount'])
+                    usedjx += (float(i['discount']) - float(i['balance']))
+                elif "极速" in i['orgLimitStr']:
+                    litesum += float(i['discount'])
+                    usedlite += (float(i['discount']) - float(i['balance']))
+                elif "健康" in i['orgLimitStr']:
+                    healthsum += float(i['discount'])
+                    usedhealth += (float(i['discount']) - float(i['balance']))
+                elif "京东商城" in i['orgLimitStr']:
+                    jdsum += float(i['discount'])
+                    usedjd += (float(i['discount']) - float(i['balance']))
+                else:
+                    tysum += float(i['discount'])
+                    usedty += (float(i['discount']) - float(i['balance']))
+                isExist = 0
+                activityName = i['activityName']
+                for ii in redinfo:
+                    if ii[0] == activityName:
+                        isExist = 1
+                        ii[1] += 1
+                        ii[2] += float(i['discount'])
+                        ii[3] += float(i['discount']) - float(i['balance'])
+                        break
+                if isExist == 0:
+                    temp = [activityName, 1, float(i['discount']), float(i['discount']) - float(i['balance'])]
+                    redinfo.append(temp)
 
 
 if __name__ == '__main__':
@@ -62,7 +105,7 @@ if __name__ == '__main__':
         f.close()
     for ck in cks:
         ptpin = re.findall(r"pt_pin=(.*?);", ck)[0]
-        printf("--------开始京东账号" + ptpin + "--------")
+        printf("\n--------开始京东账号" + ptpin + "--------\n")
         try:
             getinfo(ck)
         except:
