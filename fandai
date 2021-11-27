@@ -1,4 +1,4 @@
-const whitelist = ["/bot1944151505:"];
+const whitelist = ["/bot1234567890:"];
 const tg_host = "api.telegram.org";
 addEventListener('fetch', event => {
     event.respondWith(handleRequest(event.request))
