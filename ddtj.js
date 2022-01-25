@@ -1,17 +1,15 @@
 /*
 @肥皂 1.4 多点淘金 每天三毛。。
 阅读类的项目还是别并发。。。 重写没测试。不知道行不行
-https://api.gzswin.cn/game/index    token获取链接
+https://api.gzswin.cn/index/index    token获取链接
 https://api.gezs.cc/archery/index   unionid获取链接
 mitm      api.gzswin.cn,api.gezs.cc
 青龙变量  ddtjunionid    ddtjtoken     多账号@隔开
 手动抓包，进首页就有token   unionid打开成语闯关小程序获取
-一天运行1 - 2 次就可以了。。。
-
-入口 ：  https://s4.ax1x.com/2022/01/08/7ikNaF.jpg
 
 -------1.5增加判定，匹配不到文章的答案则随便提交答案。上限后强制多答题十次，多了一毛钱吧--------
 -------1.6增加提现判定。把当前余额全部提现----------------------
+-------1.14修复加密---------
 */
 const $ = new Env('多点淘金');
 let status;
@@ -19,7 +17,23 @@ status = (status = ($.getval("ddtjstatus") || "1")) > 1 ? `${status}` : ""; // �
 let ddtjunionidArr = [], ddtjtokenArr = [], ddtjcount = ''
 let ddtjunionid = ($.isNode() ? process.env.ddtjunionid : $.getdata('ddtjunionid')) || '';
 let ddtjtoken = ($.isNode() ? process.env.ddtjtoken : $.getdata('ddtjtoken')) || '';
-let dydcode = '', dydid = '', wxurl = '', daan = '', openid = '',uid = '',cy = '',yue = ''
+let dydcode = '', dydid = '', wxurl = '', daan = '', openid = '',uid = '',cy = '',yue = '',ddtjjm = ''
+var ddtjtime = Date.parse(new Date());
+const CryptoJS = require('crypto-js');  //引用AES源码js
+    
+    const key = CryptoJS.enc.Utf8.parse("Ecaof1s6jrKv6xSl");  //十六位十六进制数作为密钥
+    const iv = CryptoJS.enc.Utf8.parse('fb58a618fd5accb0');   //十六位十六进制数作为密钥偏移量
+    
+    
+    //加密方法
+    function Encrypt(word) {
+        let srcs = CryptoJS.enc.Utf8.parse(word);
+        let encrypted = CryptoJS.AES.encrypt(srcs, key, { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+        return encrypted //多点淘金需要加密成base64格式
+        //.ciphertext.toString().toUpperCase();
+    }
+    
+
 !(async () => {
   if (typeof $request !== "undefined") {
     await ddtjck()
@@ -47,7 +61,7 @@ let dydcode = '', dydid = '', wxurl = '', daan = '', openid = '',uid = '',cy = '
 
 
 function ddtjck() {
-  if ($request.url.indexOf("game/index") > -1) {
+  if ($request.url.indexOf("index/index") > -1) {
     const ddtjtoken = JSON.stringify($request.body)
     if (ddtjtoken) $.setdata(ddtjtoken.token, `ddtjtoken${status}`)
     $.log(ddtjtoken.token)
@@ -297,7 +311,7 @@ function ddtjid(timeout = 0) {
           await dydurl()
 
         } else {
-          $.log(`\n多点淘金题目id:${data}`)
+          $.log(`\n多点淘金题目id:${result.msg}`)
 
         }
       } catch (e) {
@@ -366,6 +380,7 @@ function ddtjyz(timeout = 0) {
         if (result.code == 200) {
           $.log(`\n多点淘金验证:${result.msg}`)
           await $.wait(2000)
+          ddtjtime = ts()
           await read_subject() 
         } else {
           $.log(`\n多点淘金验证${data}`)
@@ -410,11 +425,13 @@ function read_subject(timeout = 0) {
 //领取
 function ddtjlq(timeout = 0) {
   return new Promise((resolve) => {
-
+    ddtjjm = Encrypt(`{"article_id":${dydid},"author":"${daan}","time":"${ddtjtime}"}`)
+    //$.log(ddtjjm)
+    //$done()
     let url = {
-      url: 'https://api.gzswin.cn/index/read_subject_query',
+      url: 'https://api.gzswin.cn/index/read_subject_query_v2',
       headers: JSON.parse(`{"Host":"api.gzswin.cn","Accept":"*/*","User-Agent":"Mozilla/5.0 (iPad; CPU OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.16(0x1800103f) NetType/WIFI Language/zh_CN","Content-Type":"application/json","Content-Length":"62"}`),
-      body: `{"article_id":${dydid},"author":"${daan}","token":"${ddtjtoken}"}`
+      body: `{"data":"${ddtjjm}","token":"${ddtjtoken}"}`
     }
     $.post(url, async (err, resp, data) => {
       try {
@@ -426,6 +443,7 @@ function ddtjlq(timeout = 0) {
           await ddtjid()
         } else {
           $.log(`\n多点淘金答题${data}`)
+          $.log(ddtjjm)
           await $.wait(2000)
           await ddtjid()
         }
@@ -476,11 +494,11 @@ function ddtjye(timeout = 0) {
 //提现
 function ddtjtx(timeout = 0) {
   return new Promise((resolve) => {
-
+    ddtjjm = Encrypt(`{"money":${yue},"time":"${ddtjtime}"}`)
     let url = {
-      url: 'https://api.gzswin.cn/wxpay/index',
+      url: 'https://api.gzswin.cn/wxpay/index_v2',
       headers: JSON.parse(`{"Host":"api.gzswin.cn","Accept":"*/*","User-Agent":"Mozilla/5.0 (iPad; CPU OS 14_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/8.0.16(0x1800103f) NetType/WIFI Language/zh_CN","Content-Type":"application/json","Content-Length":"62"}`),
-      body: `{"money":${yue},"allScore":1,"token":"${ddtjtoken}"}`
+      body: `{"data":"${ddtjjm}","token":"${ddtjtoken}"}`
     }
     $.post(url, async (err, resp, data) => {
       try {
